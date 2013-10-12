@@ -13,9 +13,11 @@
 #include <utils/Log.h>
 #include <cutils/process_name.h>
 #include <cutils/memory.h>
-#include <cutils/trace.h>
+//#include <cutils/trace.h>
 #include <android_runtime/AndroidRuntime.h>
+#if PLATFORM_SDK_VERSION >= 16
 #include <sys/personality.h>
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,7 +38,7 @@ void app_usage()
 {
     fprintf(stderr,
         "Usage: app_process [java-options] cmd-dir start-class-name [options]\n");
-   fprintf(stderr, MBCP_INFO);
+    fprintf(stderr, MBCP_INFO);
 }
 
 void initTypePointers()
@@ -165,7 +167,7 @@ static void setArgv0(const char *argv0, const char *newArgv0)
     strlcpy(const_cast<char *>(argv0), newArgv0, strlen(argv0));
 }
 
-static void replaceAsm(void* function, char* newCode, int len) {
+static void replaceAsm(void* function, unsigned const char* newCode, int len) {
     function = (void*)((int)function & ~1);
     void* pageStart = (void*)((int)function & ~(PAGESIZE - 1));
     mprotect(pageStart, PAGESIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -174,12 +176,16 @@ static void replaceAsm(void* function, char* newCode, int len) {
     __clear_cache(function, (char*)function + len);
 }
 
+// Be careful on old compiler: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=49169
+// ARM: optimisations strip the Thumb/ARM mode bit off function pointers
 static void patchReturnTrue(void* function) {
-    char asmReturnTrueThumb[] = { 0x01, 0x20, 0x70, 0x47 };
-    char asmReturnTrueArm[] = { 0x01, 0x00, 0xA0, 0xE3, 0x1E, 0xFF, 0x2F, 0xE1 };
+    unsigned const char asmReturnTrueThumb[] = { 0x01, 0x20, 0x70, 0x47 };
+    unsigned const char asmReturnTrueArm[] = { 0x01, 0x00, 0xA0, 0xE3, 0x1E, 0xFF, 0x2F, 0xE1 };
     if ((int)function & 1) {
+	    ALOGI("asmReturnTrueThumb 0x%x", (unsigned int) function);
         replaceAsm(function, asmReturnTrueThumb, sizeof(asmReturnTrueThumb));
     } else {
+	    ALOGI("asmReturnTrueArm 0x%x", (unsigned int) function);
         replaceAsm(function, asmReturnTrueArm, sizeof(asmReturnTrueArm));
     }
 }
@@ -204,6 +210,8 @@ int main(int argc, char* const argv[])
         printf("MBCP_DISABLE_DEX_DEP=%s\n", MBCP_DISABLE_DEX_DEP);
         return 0;
     }
+
+#if PLATFORM_SDK_VERSION >= 16
 #ifdef __arm__
     /*
      * b/7188322 - Temporarily revert to the compat memory layout
@@ -230,8 +238,8 @@ int main(int argc, char* const argv[])
     }
     unsetenv("NO_ADDR_COMPAT_LAYOUT_FIXUP");
 #endif
-
     initTypePointers();
+#endif
 
     // These are global variables in ProcessState.cpp
     mArgC = argc;
