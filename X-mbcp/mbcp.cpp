@@ -1,25 +1,13 @@
 #include "mbcp.h"
 #include <stdlib.h>
 #include <utils/Log.h>
-#include <cutils/properties.h>
-
-static int getProp(const char *propName)
-{
-    char val[8];
-    property_get(propName, val, "0");
-    return atoi(val);
-}
 
 static bool isMbcpEnable()
 {
-    if (getProp(MBCP_PROPERTY_NAME) != 0) {
-        return true;
-    }
-    if (access("/data/mbcp_disable", F_OK) == 0) {
+    if (access(MBCP_DISABLE, F_OK) == 0) {
         return false;
     }
     if (access(MBCP_PATH, F_OK) == 0) {
-        property_set(MBCP_PROPERTY_NAME, "1");
         return true;
     }
     return false;

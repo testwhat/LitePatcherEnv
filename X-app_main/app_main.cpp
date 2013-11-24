@@ -206,7 +206,7 @@ int main(int argc, char* const argv[])
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {
         printf(MBCP_INFO);
         printf("MBCP_PATH=%s\n", MBCP_PATH);
-        printf("MBCP_PROPERTY_NAME=%s\n", MBCP_PROPERTY_NAME);
+        printf("MBCP_DISABLE=%s\n", MBCP_DISABLE);
         printf("MBCP_DISABLE_DEX_DEP=%s\n", MBCP_DISABLE_DEX_DEP);
         return 0;
     }
